@@ -9,24 +9,31 @@
     <script type="text/javascript">
         var appurl = 'alisgidis://prod.alisgidis.com/profile';
         var appstore = 'https://apps.apple.com/tr/app/al%C4%B1%C5%9Fgidi%C5%9F/id6504862902?l=tr';
-        var fallbackTimer = null;
-        var didHide = false;
+        var didFallback = false;
 
         function DeepLinker(options) {
             if (!options) {
                 throw new Error('no options');
             }
+            var didHide = false;
 
             function onVisibilityChange(e) {
                 if (e.target.visibilityState === 'hidden') {
-                    clearTimeout(fallbackTimer);
                     didHide = true;
                 }
             }
 
+            function onFocus() {
+                if (!didHide && options.onFallback && !didFallback) {
+                    options.onFallback();
+                }
+                didHide = false;
+            }
+
             function bindEvents(mode) {
                 [
-                    [document, 'visibilitychange', onVisibilityChange]
+                    [document, 'visibilitychange', onVisibilityChange],
+                    [window, 'focus', onFocus]
                 ].forEach(function (conf) {
                     conf[0][mode + 'EventListener'](conf[1], conf[2]);
                 });
@@ -35,33 +42,39 @@
             bindEvents('add');
 
             this.openURL = function (url) {
-                fallbackTimer = setTimeout(function () {
+                var fallbackTimer = setTimeout(function () {
                     if (!didHide) {
+                        didFallback = true;
                         options.onFallback();
                     }
                 }, 1500);
 
-                var a = document.createElement('a');
-                a.href = url;
-                a.style.display = 'none';
-                document.body.appendChild(a);
-                a.click();
+                try {
+                    window.location = url;
+                } catch (error) {
+                    clearTimeout(fallbackTimer);
+                    options.onFallback();
+                }
+            };
 
+            this.closeWindow = function () {
                 setTimeout(function () {
-                    document.body.removeChild(a);
-                }, 1000);
+                    window.close();
+                }, 1500);
             };
         }
 
-        window.onload = function () {
-            var url = appurl;
-            var linker = new DeepLinker({
-                onFallback: function () {
-                    window.location = appstore;
-                }
-            });
-            linker.openURL(url);
-        }
+        var url = appurl;
+        var linker = new DeepLinker({
+            onFallback: function () {
+                window.location = appstore;
+            },
+            onReturn: function () {
+                console.log('onReturn');
+                linker.closeWindow();
+            }
+        });
+        linker.openURL(url);
     </script>
 </body>
 </html>
