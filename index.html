@@ -23,17 +23,9 @@
                 }
             }
 
-            function onFocus() {
-                if (!didHide && options.onFallback && !didFallback) {
-                    options.onFallback();
-                }
-                didHide = false;
-            }
-
             function bindEvents(mode) {
                 [
-                    [document, 'visibilitychange', onVisibilityChange],
-                    [window, 'focus', onFocus]
+                    [document, 'visibilitychange', onVisibilityChange]
                 ].forEach(function (conf) {
                     conf[0][mode + 'EventListener'](conf[1], conf[2]);
                 });
@@ -42,7 +34,6 @@
             bindEvents('add');
 
             this.openURL = function (url) {
-                // Geçersiz sayfa uyarısını engellemek için <a> etiketi ile yönlendirme yapıyoruz
                 var fallbackTimer = setTimeout(function () {
                     if (!didHide) {
                         didFallback = true;
@@ -50,20 +41,13 @@
                     }
                 }, 1500);
 
-                var a = document.createElement('a');
-                a.href = url;
-                a.style.display = 'none';
-                document.body.appendChild(a);
-                a.click();
+                var iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = url;
+                document.body.appendChild(iframe);
 
                 setTimeout(function () {
-                    document.body.removeChild(a);
-                }, 1000);
-            };
-
-            this.closeWindow = function () {
-                setTimeout(function () {
-                    window.close();
+                    document.body.removeChild(iframe);
                 }, 1500);
             };
         }
@@ -72,13 +56,12 @@
         var linker = new DeepLinker({
             onFallback: function () {
                 window.location = appstore;
-            },
-            onReturn: function () {
-                console.log('onReturn');
-                linker.closeWindow();
             }
         });
-        linker.openURL(url);
+
+        window.onload = function () {
+            linker.openURL(url);
+        };
     </script>
 </body>
 </html>
