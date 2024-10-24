@@ -42,6 +42,7 @@
             bindEvents('add');
 
             this.openURL = function (url) {
+                // Geçersiz sayfa uyarısını engellemek için <a> etiketi ile yönlendirme yapıyoruz
                 var fallbackTimer = setTimeout(function () {
                     if (!didHide) {
                         didFallback = true;
@@ -49,12 +50,15 @@
                     }
                 }, 1500);
 
-                try {
-                    window.location = url;
-                } catch (error) {
-                    clearTimeout(fallbackTimer);
-                    options.onFallback();
-                }
+                var a = document.createElement('a');
+                a.href = url;
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                a.click();
+
+                setTimeout(function () {
+                    document.body.removeChild(a);
+                }, 1000);
             };
 
             this.closeWindow = function () {
